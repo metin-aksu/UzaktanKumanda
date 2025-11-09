@@ -51,7 +51,7 @@ const ControlScreen = ({ route, navigation }) => {
       console.error('Bağlantı hatası:', error);
       Alert.alert(
         'Bağlantı Hatası',
-        'TV\'ye bağlanılamadı. TV\'nin açık ve ağda olduğundan emin olun.',
+        `TV'ye bağlanılamadı. TV'nin açık ve ağda olduğundan emin olun.`,
         [
           { text: 'Geri', onPress: () => navigation.goBack() },
           { text: 'Tekrar Dene', onPress: connectToTV },
@@ -63,21 +63,29 @@ const ControlScreen = ({ route, navigation }) => {
   };
 
   const connectLGTV = async () => {
+    console.log('🔧 LG TV bağlantısı başlatılıyor...');
+    console.log('📍 IP:', device.ip);
+    
     const service = new LGTVService();
     
     // Kayıtlı client key'i yükle
     const clientKey = await AsyncStorage.getItem(`lg_client_key_${device.ip}`);
+    console.log('🔑 Kayıtlı client key:', clientKey ? 'Var' : 'Yok');
     
     try {
+      console.log('⏳ Bağlantı kuruluyor...');
       const newClientKey = await service.connect(device.ip, clientKey);
+      console.log('✅ Bağlantı başarılı!');
       
       // Yeni client key'i kaydet
       if (newClientKey && newClientKey !== clientKey) {
+        console.log('💾 Yeni client key kaydediliyor...');
         await AsyncStorage.setItem(`lg_client_key_${device.ip}`, newClientKey);
       }
 
       // Ses seviyesini al
       try {
+        console.log('🔊 Ses seviyesi alınıyor...');
         const volumeData = await service.getVolume();
         if (volumeData && volumeData.volume !== undefined) {
           setVolume(volumeData.volume);
@@ -118,7 +126,7 @@ const ControlScreen = ({ route, navigation }) => {
 
   const handleKeyPress = async (key) => {
     if (!tvService || !connected) {
-      Alert.alert('Hata', 'TV\'ye bağlı değil');
+      Alert.alert('Hata', `TV'ye bağlı değil`);
       return;
     }
 
@@ -135,6 +143,15 @@ const ControlScreen = ({ route, navigation }) => {
   };
 
   const handleLGKey = async (key) => {
+    // Bağlantı kopuksa yeniden bağlan
+    if (!tvService || !tvService.ws || tvService.ws.readyState !== 1) {
+      console.log('⚠️ Bağlantı kopuk, yeniden bağlanılıyor...');
+      Alert.alert('Bağlantı Koptu', 'TV ile bağlantı kesildi. Yeniden bağlanılıyor...');
+      setConnected(false);
+      await connectToTV();
+      return;
+    }
+
     const keyMap = {
       UP: 'UP',
       DOWN: 'DOWN',
@@ -176,7 +193,14 @@ const ControlScreen = ({ route, navigation }) => {
       Alert.alert('TV Kapatılıyor', 'TV kapatılıyor...');
       navigation.goBack();
     } else if (keyMap[key]) {
-      await tvService.sendKey(keyMap[key]);
+      // Gerçek tuş gönder
+      try {
+        await tvService.sendKey(keyMap[key]);
+        console.log(`✅ Tuş gönderildi: ${keyMap[key]}`);
+      } catch (error) {
+        console.error(`❌ Tuş gönderilemedi: ${error.message}`);
+        Alert.alert('❌ Hata', error.message);
+      }
     }
 
     // Ses tuşları için seviye güncelle
@@ -209,7 +233,7 @@ const ControlScreen = ({ route, navigation }) => {
           Alert.alert('Ambilight', newState ? 'Açıldı' : 'Kapatıldı');
         }
       } catch (error) {
-        Alert.alert('Hata', 'Ambilight bu TV\'de desteklenmiyor');
+        Alert.alert('Hata', `Ambilight bu TV'de desteklenmiyor`);
       }
     } else if (PhilipsKeys[key]) {
       await tvService.sendKey(PhilipsKeys[key]);
@@ -231,6 +255,15 @@ const ControlScreen = ({ route, navigation }) => {
     }
   };
 
+  const cancelConnection = () => {
+    console.log('❌ Bağlantı kullanıcı tarafından iptal edildi');
+    if (tvService) {
+      tvService.disconnect();
+    }
+    setConnecting(false);
+    navigation.goBack();
+  };
+
   if (connecting) {
     return (
       <View style={styles.loadingContainer}>
@@ -238,6 +271,11 @@ const ControlScreen = ({ route, navigation }) => {
         <Text style={styles.loadingText}>TV\'ye bağlanılıyor...</Text>
         <Text style={styles.deviceInfo}>{device.name}</Text>
         <Text style={styles.deviceInfo}>{device.ip}</Text>
+        <TouchableOpacity 
+          style={styles.cancelButton}
+          onPress={cancelConnection}>
+          <Text style={styles.cancelButtonText}>İptal</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -289,6 +327,24 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 14,
     color: '#999',
+  },
+  cancelButton: {
+    marginTop: 30,
+    backgroundColor: '#f44336',
+    paddingHorizontal: 40,
+    paddingVertical: 12,
+    borderRadius: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   header: {
     backgroundColor: '#fff',

@@ -118,6 +118,69 @@ const HomeScreen = ({ navigation }) => {
     navigation.navigate('Control', { device });
   };
 
+  const handleTest = () => {
+    navigation.navigate('WebSocketTest');
+  };
+
+  const handleClearAllData = () => {
+    Alert.alert(
+      '⚠️ Tüm Verileri Temizle',
+      'Tüm televizyonlar ve kayıtlı client key\'ler silinecek. Emin misiniz?',
+      [
+        {
+          text: 'İptal',
+          style: 'cancel',
+        },
+        {
+          text: 'Temizle',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.clear();
+              setDevices([]);
+              Alert.alert('✅ Başarılı', 'Tüm veriler temizlendi');
+            } catch (error) {
+              Alert.alert('Hata', 'Veriler temizlenirken hata oluştu: ' + error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteDevice = async (device) => {
+    Alert.alert(
+      'TV Sil',
+      `${device.name} televizyonunu silmek istediğinizden emin misiniz?`,
+      [
+        {
+          text: 'İptal',
+          style: 'cancel',
+        },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            // Listeden çıkar
+            const updatedDevices = devices.filter(d => d.ip !== device.ip);
+            setDevices(updatedDevices);
+            
+            // AsyncStorage'dan sil
+            try {
+              await AsyncStorage.setItem('saved_devices', JSON.stringify(updatedDevices));
+              // Client key'i de sil
+              if (device.type === 'lg') {
+                await AsyncStorage.removeItem(`lg_client_key_${device.ip}`);
+              }
+            } catch (error) {
+              console.error('Cihaz silinirken hata:', error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <TVList
@@ -125,12 +188,25 @@ const HomeScreen = ({ navigation }) => {
         onSelectDevice={handleSelectDevice}
         onDiscovery={handleDiscovery}
         isScanning={isScanning}
+        onDeleteDevice={handleDeleteDevice}
       />
 
       <TouchableOpacity
         style={styles.manualAddButton}
         onPress={() => setShowManualInput(true)}>
         <Text style={styles.manualAddButtonText}>+ Manuel Ekle</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.manualAddButton, styles.testButton]}
+        onPress={handleTest}>
+        <Text style={styles.manualAddButtonText}>🧪 WebSocket Test</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.manualAddButton, styles.clearButton]}
+        onPress={handleClearAllData}>
+        <Text style={styles.manualAddButtonText}>🗑️ Tüm Verileri Temizle</Text>
       </TouchableOpacity>
 
       <Modal
@@ -209,7 +285,7 @@ const styles = StyleSheet.create({
   },
   manualAddButton: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 100,
     right: 20,
     backgroundColor: '#4caf50',
     paddingHorizontal: 20,
@@ -220,6 +296,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
+  },
+  testButton: {
+    bottom: 170,
+    backgroundColor: '#ff9800',
+  },
+  clearButton: {
+    bottom: 30,
+    backgroundColor: '#f44336',
   },
   manualAddButtonText: {
     color: '#fff',

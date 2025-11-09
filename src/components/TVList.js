@@ -12,7 +12,7 @@ import {
   FlatList,
 } from 'react-native';
 
-const TVList = ({ devices, onSelectDevice, onDiscovery, isScanning }) => {
+const TVList = ({ devices, onSelectDevice, onDiscovery, isScanning, onDeleteDevice }) => {
   const renderDevice = ({ item }) => (
     <TouchableOpacity
       style={styles.deviceCard}
@@ -27,9 +27,16 @@ const TVList = ({ devices, onSelectDevice, onDiscovery, isScanning }) => {
           <Text style={styles.manualTag}>Manuel Eklendi</Text>
         )}
       </View>
-      <View style={[styles.typeIndicator, 
-        item.type === 'lg' ? styles.lgIndicator : styles.philipsIndicator]}
-      />
+      {onDeleteDevice && (
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            onDeleteDevice(item);
+          }}>
+          <Text style={styles.deleteButtonText}>🗑️</Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 
@@ -60,7 +67,7 @@ const TVList = ({ devices, onSelectDevice, onDiscovery, isScanning }) => {
         <FlatList
           data={devices}
           renderItem={renderDevice}
-          keyExtractor={(item) => item.ip}
+          keyExtractor={(item, index) => `${item.ip}_${index}`}
           contentContainerStyle={styles.listContent}
         />
       )}
@@ -77,7 +84,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
+    paddingTop: 60,
+    paddingHorizontal: 15,
+    paddingBottom: 15,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -141,17 +150,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontStyle: 'italic',
   },
-  typeIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  deleteButton: {
+    padding: 10,
     marginLeft: 10,
   },
-  lgIndicator: {
-    backgroundColor: '#d32f2f',
-  },
-  philipsIndicator: {
-    backgroundColor: '#1976d2',
+  deleteButtonText: {
+    fontSize: 24,
+    color: '#f44336',
   },
   emptyContainer: {
     flex: 1,
