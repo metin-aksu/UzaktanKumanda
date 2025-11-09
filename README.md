@@ -1,3 +1,35 @@
+# Uzaktan Kumanda - LG & Philips TV Remote Control
+
+React Native ile geliştirilmiş, LG WebOS ve Philips Smart TV'lerinizi kontrol edebileceğiniz uzaktan kumanda uygulaması.
+
+## 🎯 Özellikler
+
+- **LG WebOS TV Desteği**: WebSocket üzerinden tam kontrol
+- **Philips Smart TV Desteği**: JointSpace API ile HTTP kontrol
+- **Otomatik TV Keşfi**: Ağdaki TV'leri otomatik bulma (SSDP)
+- **Manuel TV Ekleme**: IP adresi ile manuel bağlantı
+- **Tam Kumanda Özellikleri**:
+  - Navigasyon (Yukarı, Aşağı, Sağ, Sol, OK)
+  - Ses kontrolü (Ses +/-, Sessiz)
+  - Kanal kontrolü (Kanal +/-)
+  - Medya kontrolleri (Oynat, Duraklat, İleri, Geri)
+  - Sayı tuşları (0-9)
+  - Renkli tuşlar (Kırmızı, Yeşil, Sarı, Mavi)
+  - Güç, Home, Menu, Geri tuşları
+  - Philips için Ambilight kontrolü
+
+## 📋 Gereksinimler
+
+- Node.js >= 18
+- React Native CLI
+- Android Studio (Android için)
+- Xcode (iOS için - sadece macOS)
+- LG WebOS TV (2014 ve sonrası modeller)
+- Philips Smart TV (Android TV veya JointSpace API destekli)
+- Telefon ve TV'lerin aynı WiFi ağında olması
+
+---
+
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
