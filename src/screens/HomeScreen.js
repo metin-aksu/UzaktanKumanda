@@ -15,6 +15,7 @@ import {
 import TVList from '../components/TVList';
 import TVDiscoveryService from '../services/TVDiscoveryService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import TrashIcon from '../components/TrashIcon';
 
 const HomeScreen = ({ navigation }) => {
   const [devices, setDevices] = useState([]);
@@ -118,10 +119,6 @@ const HomeScreen = ({ navigation }) => {
     navigation.navigate('Control', { device });
   };
 
-  const handleTest = () => {
-    navigation.navigate('WebSocketTest');
-  };
-
   const handleClearAllData = () => {
     Alert.alert(
       '⚠️ Tüm Verileri Temizle',
@@ -191,23 +188,19 @@ const HomeScreen = ({ navigation }) => {
         onDeleteDevice={handleDeleteDevice}
       />
 
-      <TouchableOpacity
-        style={styles.manualAddButton}
-        onPress={() => setShowManualInput(true)}>
-        <Text style={styles.manualAddButtonText}>+ Manuel Ekle</Text>
-      </TouchableOpacity>
+      <View style={styles.bottomButtons}>
+        <TouchableOpacity
+          style={styles.manualAddButton}
+          onPress={() => setShowManualInput(true)}>
+          <Text style={styles.manualAddButtonText}>+ Manuel Ekle</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.manualAddButton, styles.testButton]}
-        onPress={handleTest}>
-        <Text style={styles.manualAddButtonText}>🧪 WebSocket Test</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.manualAddButton, styles.clearButton]}
-        onPress={handleClearAllData}>
-        <Text style={styles.manualAddButtonText}>🗑️ Tüm Verileri Temizle</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.clearButton}
+          onPress={handleClearAllData}>
+          <TrashIcon size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
       <Modal
         visible={showManualInput}
@@ -283,10 +276,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  manualAddButton: {
+  bottomButtons: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 60,
+    left: 20,
     right: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  manualAddButton: {
     backgroundColor: '#4caf50',
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -297,18 +296,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
-  testButton: {
-    bottom: 170,
-    backgroundColor: '#ff9800',
-  },
-  clearButton: {
-    bottom: 30,
-    backgroundColor: '#f44336',
-  },
   manualAddButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  clearButton: {
+    backgroundColor: '#f44336',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   modalOverlay: {
     flex: 1,

@@ -22,6 +22,8 @@ const ControlScreen = ({ route, navigation }) => {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(true);
   const [tvService, setTvService] = useState(null);
+  const [channelBuffer, setChannelBuffer] = useState('');
+  const [channelTimer, setChannelTimer] = useState(null);
 
   useEffect(() => {
     connectToTV();
@@ -29,6 +31,9 @@ const ControlScreen = ({ route, navigation }) => {
     return () => {
       if (tvService) {
         tvService.disconnect();
+      }
+      if (channelTimer) {
+        clearTimeout(channelTimer);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,9 +108,44 @@ const ControlScreen = ({ route, navigation }) => {
     }
   };
 
+  const handleChannelNumber = (digit) => {
+    // Mevcut timer'ı iptal et
+    if (channelTimer) {
+      clearTimeout(channelTimer);
+    }
+
+    // Buffer'a rakamı ekle
+    const newBuffer = channelBuffer + digit;
+    setChannelBuffer(newBuffer);
+
+    // bekle, sonra kanala geç
+    const timer = setTimeout(async () => {
+      console.log(`📺 Kanal ${newBuffer}'e geçiliyor...`);
+      try {
+        await tvService.request('ssap://tv/openChannel', {
+          channelNumber: newBuffer
+        });
+        setChannelBuffer('');
+      } catch (error) {
+        console.error('Kanal değiştirme hatası:', error);
+        Alert.alert('Hata', `Kanal ${newBuffer}'e geçilemedi`);
+        setChannelBuffer('');
+      }
+    }, 1200);
+
+    setChannelTimer(timer);
+  };
+
   const handleKeyPress = async (key) => {
     if (!tvService || !connected) {
       Alert.alert('Hata', `TV'ye bağlı değil`);
+      return;
+    }
+
+    // Sayı tuşlarını özel olarak işle
+    if (key.startsWith('DIGIT_')) {
+      const digit = key.replace('DIGIT_', '');
+      handleChannelNumber(digit);
       return;
     }
 
