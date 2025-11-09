@@ -22,8 +22,6 @@ const ControlScreen = ({ route, navigation }) => {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(true);
   const [tvService, setTvService] = useState(null);
-  const [volume, setVolume] = useState(50);
-  const [muted, setMuted] = useState(false);
 
   useEffect(() => {
     connectToTV();
@@ -83,17 +81,7 @@ const ControlScreen = ({ route, navigation }) => {
         await AsyncStorage.setItem(`lg_client_key_${device.ip}`, newClientKey);
       }
 
-      // Ses seviyesini al
-      try {
-        console.log('🔊 Ses seviyesi alınıyor...');
-        const volumeData = await service.getVolume();
-        if (volumeData && volumeData.volume !== undefined) {
-          setVolume(volumeData.volume);
-          setMuted(volumeData.muted || false);
-        }
-      } catch (error) {
-        console.error('Ses seviyesi alınamadı:', error);
-      }
+      // Ses seviyesi artık gösterilmiyor
 
       setTvService(service);
     } catch (error) {
@@ -107,16 +95,7 @@ const ControlScreen = ({ route, navigation }) => {
     try {
       await service.connect(device.ip);
 
-      // Ses seviyesini al
-      try {
-        const volumeData = await service.getVolume();
-        if (volumeData && volumeData.current !== undefined) {
-          setVolume(volumeData.current);
-          setMuted(volumeData.muted || false);
-        }
-      } catch (error) {
-        console.error('Ses seviyesi alınamadı:', error);
-      }
+      // Ses seviyesi artık gösterilmiyor
 
       setTvService(service);
     } catch (error) {
@@ -203,20 +182,7 @@ const ControlScreen = ({ route, navigation }) => {
       }
     }
 
-    // Ses tuşları için seviye güncelle
-    if (key === 'VOLUME_UP' || key === 'VOLUME_DOWN' || key === 'MUTE') {
-      setTimeout(async () => {
-        try {
-          const volumeData = await tvService.getVolume();
-          if (volumeData) {
-            setVolume(volumeData.volume || 0);
-            setMuted(volumeData.muted || false);
-          }
-        } catch (error) {
-          console.error('Ses seviyesi güncellenemedi:', error);
-        }
-      }, 300);
-    }
+    // Ses seviyesi artık gösterilmiyor
   };
 
   const handlePhilipsKey = async (key) => {
@@ -239,20 +205,7 @@ const ControlScreen = ({ route, navigation }) => {
       await tvService.sendKey(PhilipsKeys[key]);
     }
 
-    // Ses tuşları için seviye güncelle
-    if (key === 'VOLUME_UP' || key === 'VOLUME_DOWN' || key === 'MUTE') {
-      setTimeout(async () => {
-        try {
-          const volumeData = await tvService.getVolume();
-          if (volumeData) {
-            setVolume(volumeData.current || 0);
-            setMuted(volumeData.muted || false);
-          }
-        } catch (error) {
-          console.error('Ses seviyesi güncellenemedi:', error);
-        }
-      }, 300);
-    }
+    // Ses seviyesi artık gösterilmiyor
   };
 
   const cancelConnection = () => {
@@ -295,12 +248,7 @@ const ControlScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      <View style={styles.volumeContainer}>
-        <Text style={styles.volumeLabel}>Ses: {muted ? '🔇' : '🔊'}</Text>
-        <Text style={styles.volumeValue}>{volume}</Text>
-      </View>
-
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <RemoteControl onKeyPress={handleKeyPress} tvType={device.type} />
       </ScrollView>
     </View>
@@ -349,6 +297,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#fff',
     padding: 15,
+    paddingTop: 50,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     flexDirection: 'row',
@@ -414,6 +363,10 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 20,
+    paddingBottom: 80,
   },
 });
 

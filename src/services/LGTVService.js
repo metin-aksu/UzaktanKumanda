@@ -104,7 +104,7 @@ class LGTVService {
       
       const registerPayload = {
         type: 'register',
-        id: 'register_0', // Sabit bir ID kullanalım
+        id: 'register_0',
         payload: {
           forcePairing: false,
           pairingType: 'PROMPT',
@@ -141,6 +141,10 @@ class LGTVService {
                 'UPDATE_FROM_REMOTE_APP',
                 'READ_LGE_TV_INPUT_EVENTS',
                 'READ_TV_CURRENT_TIME',
+                'CONTROL_INPUT_JOYSTICK',
+                'CONTROL_INPUT_MEDIA_RECORDING',
+                'CONTROL_INPUT_MEDIA_PLAYBACK',
+                'CONTROL_INPUT_TV',
               ],
               serial: '2f930e4d923a4859a918b8480d3771ca',
             },
@@ -249,122 +253,113 @@ class LGTVService {
   }
 
   /**
-   * Tuş gönder - Gerekirse Input Socket kullanarak
+   * Tuş gönder - SSAP API kullanarak
    */
   async sendKey(key) {
     console.log(`🎮 Tuş gönderiliyor: ${key}`);
-    const simpleCommands = ['VOLUMEUP', 'VOLUMEDOWN', 'MUTE', 'PLAY', 'PAUSE', 'STOP', 'REWIND', 'FASTFORWARD', 'CHANNELUP', 'CHANNELDOWN'];
     
-    if (simpleCommands.includes(key)) {
-      return this.sendSimpleKey(key);
-    }
-
     try {
-      if (!this.inputSocket || !this.inputSocket.isOpen()) {
-        console.log('🔌 Input socket bağlantısı kuruluyor...');
-        const response = await this.request('ssap://com.webos.service.networkinput/getPointerInputSocket');
-        
-        if (response && response.socketPath) {
-          await this.connectInputSocket(response.socketPath);
-        } else {
-          throw new Error('TV, input socket path döndürmedi.');
-        }
+      // Basit medya kontrolleri
+      const mediaCommands = {
+        'PLAY': 'ssap://media.controls/play',
+        'PAUSE': 'ssap://media.controls/pause',
+        'STOP': 'ssap://media.controls/stop',
+        'REWIND': 'ssap://media.controls/rewind',
+        'FASTFORWARD': 'ssap://media.controls/fastForward',
+      };
+      
+      if (mediaCommands[key]) {
+        return this.request(mediaCommands[key]);
       }
-      return this.sendButtonViaInputSocket(key);
-
-    } catch (error) {
-      console.error('❌ Input socket işlemi başarısız:', error.message);
+      
+      // Ses ve kanal kontrolleri
+      if (key === 'VOLUMEUP') {
+        return this.request('ssap://audio/volumeUp');
+      }
+      if (key === 'VOLUMEDOWN') {
+        return this.request('ssap://audio/volumeDown');
+      }
+      if (key === 'MUTE') {
+        const { muted } = await this.getVolume();
+        return this.setMute(!muted);
+      }
+      if (key === 'CHANNELUP') {
+        return this.request('ssap://tv/channelUp');
+      }
+      if (key === 'CHANNELDOWN') {
+        return this.request('ssap://tv/channelDown');
+      }
+      
+      // HOME tuşu - Ana ekrana dön
+      if (key === 'HOME') {
+        return this.request('ssap://system.launcher/launch', {
+          id: 'com.webos.app.home'
+        });
+      }
+      
+      // MENU tuşu - Ayarlar menüsü
+      if (key === 'MENU') {
+        return this.request('ssap://system.launcher/launch', {
+          id: 'com.webos.app.livemenu'
+        });
+      }
+      
+      // BACK tuşu - LG TV'de desteklenmiyor (Input Socket gerekiyor)
+      if (key === 'BACK' || key === 'EXIT') {
+        return this.request('ssap://system.notifications/createToast', {
+          message: 'BACK tuşu LG TV\'nizde desteklenmiyor. Bunun yerine HOME tuşunu kullanabilirsiniz.'
+        });
+      }
+      
+      // Enter/OK tuşu
+      if (key === 'ENTER' || key === 'OK') {
+        return this.request('ssap://com.webos.service.ime/sendEnterKey');
+      }
+      
+      // Yön tuşları - Sadece bildirim göster (LG TV doğrudan API desteklemiyor)
+      const directionKeys = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
+      if (directionKeys.includes(key)) {
+        return this.request('ssap://system.notifications/createToast', {
+          message: `${key} tuşu - Bu tuş için Input Socket gerekiyor (TV'nizde desteklenmiyor)`
+        });
+      }
+      
+      // Sayı tuşları - Kanal değiştirme için kullan
+      if (/^\d+$/.test(key)) {
+        const channelNumber = parseInt(key, 10);
+        return this.request('ssap://tv/openChannel', {
+          channelNumber: channelNumber.toString()
+        });
+      }
+      
+      // Renkli tuşlar - Bildirim göster
+      const colorKeys = ['RED', 'GREEN', 'YELLOW', 'BLUE'];
+      if (colorKeys.includes(key)) {
+        return this.request('ssap://system.notifications/createToast', {
+          message: `${key} tuşu henüz desteklenmiyor`
+        });
+      }
+      
+      // INFO tuşu
+      if (key === 'INFO') {
+        return this.request('ssap://system.notifications/createToast', {
+          message: 'INFO tuşu henüz desteklenmiyor'
+        });
+      }
+      
+      // Diğer tuşlar için genel bildirim
+      console.log(`⚠️ Desteklenmeyen tuş: ${key}`);
       return this.request('ssap://system.notifications/createToast', {
-        message: `${key} tuşu gönderilemedi: ${error.message}`
+        message: `${key} tuşu şu anda desteklenmiyor`
       });
+      
+    } catch (error) {
+      console.error(`❌ ${key} tuşu gönderilemedi:`, error.message);
+      throw error;
     }
   }
 
-  /**
-   * Input Socket'e bağlan
-   */
-  connectInputSocket(socketPath) {
-    return new Promise((resolve, reject) => {
-      console.log(`🔌 Input socket'e bağlanılıyor: ${socketPath}`);
 
-      if (this.inputSocket) {
-        this.inputSocket.close();
-      }
-
-      this.inputSocket = new CustomWebSocket(socketPath);
-
-      this.inputSocket.onopen = () => {
-        console.log('✅ Input socket bağlantısı AÇILDI!');
-        resolve();
-      };
-
-      this.inputSocket.onerror = (error) => {
-        console.error('❌ Input socket hatası:', error.message);
-        this.inputSocket = null;
-        reject(new Error('Input socket bağlantı hatası.'));
-      };
-
-      this.inputSocket.onclose = (event) => {
-        console.log('🔌 Input socket KAPANDI.', event.code, event.reason);
-        this.inputSocket = null;
-      };
-
-      this.inputSocket.onmessage = (event) => {
-        console.log('📨 Input socket mesajı:', event.data);
-      };
-    });
-  }
-
-  /**
-   * Input Socket üzerinden tuş komutu gönder
-   */
-  sendButtonViaInputSocket(key) {
-    if (this.inputSocket && this.inputSocket.isOpen()) {
-      const message = `type:button\nname:${key}\n\n`;
-      console.log(`📤 Input socket'e gönderiliyor: ${key}`);
-      this.inputSocket.send(message);
-    } else {
-      console.error('❌ Input socket hazır değil, tuş gönderilemedi.');
-      throw new Error('Input socket bağlantısı kapalı.');
-    }
-  }
-
-  /**
-   * Basit tuş gönderme (Ana soket üzerinden)
-   */
-  async sendSimpleKey(key) {
-    console.log(`⚙️ Ana soket: Basit tuş gönderiliyor: ${key}`);
-    
-    if (key === 'VOLUMEUP') {
-      return this.request('ssap://audio/volumeUp');
-    }
-    if (key === 'VOLUMEDOWN') {
-      return this.request('ssap://audio/volumeDown');
-    }
-    if (key === 'MUTE') {
-      const { muted } = await this.getVolume();
-      return this.setMute(!muted);
-    }
-    if (key === 'CHANNELUP') {
-      return this.request('ssap://tv/channelUp');
-    }
-    if (key === 'CHANNELDOWN') {
-      return this.request('ssap://tv/channelDown');
-    }
-    
-    const mediaCommands = {
-      'PLAY': 'ssap://media.controls/play',
-      'PAUSE': 'ssap://media.controls/pause',
-      'STOP': 'ssap://media.controls/stop',
-      'REWIND': 'ssap://media.controls/rewind',
-      'FASTFORWARD': 'ssap://media.controls/fastForward',
-    };
-    if (mediaCommands[key]) {
-      return this.request(mediaCommands[key]);
-    }
-
-    console.warn(`🤔 ${key} için basit komut bulunamadı.`);
-  }
 
   /**
    * Ses seviyesini al
