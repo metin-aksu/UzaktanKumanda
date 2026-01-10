@@ -31,18 +31,18 @@ const RemoteControl = ({ onKeyPress, tvType }) => {
 
   return (
     <View style={styles.container}>
-      {/* Güç ve Kanal */}
+      {/* Üst sıra: Power, Ses+, Kanal+ */}
       <View style={styles.row}>
         {renderIconButton(<PowerIcon size={28} color="#fff" />, 'POWER', styles.powerButton)}
-        {renderButton('CH-', 'CHANNEL_DOWN', styles.channelButton)}
+        {renderButton('VOL+', 'VOLUME_UP', styles.volumeButton)}
         {renderButton('CH+', 'CHANNEL_UP', styles.channelButton)}
       </View>
 
-      {/* Ses Kontrolü */}
+      {/* Alt sıra: Mute, Ses-, Kanal- */}
       <View style={styles.row}>
         {renderButton('🔇', 'MUTE')}
         {renderButton('VOL-', 'VOLUME_DOWN', styles.volumeButton)}
-        {renderButton('VOL+', 'VOLUME_UP', styles.volumeButton)}
+        {renderButton('CH-', 'CHANNEL_DOWN', styles.channelButton)}
       </View>
 
       {/* Sayı Tuşları */}
@@ -135,6 +135,9 @@ const styles = StyleSheet.create({
   },
   specialButton: {
     backgroundColor: '#ff9800',
+  },
+  spacer: {
+    flex: 1,
   },
   numberPad: {
     marginTop: 10,
