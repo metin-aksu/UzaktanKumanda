@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import RemoteControl from '../components/RemoteControl';
 import LGTVService from '../services/LGTVService';
@@ -51,13 +52,13 @@ const ControlScreen = ({ route, navigation }) => {
 
       setConnected(true);
     } catch (error) {
-      console.error('Bağlantı hatası:', error);
+      console.error('Connection error:', error);
       Alert.alert(
-        'Bağlantı Hatası',
-        `TV'ye bağlanılamadı. TV'nin açık ve ağda olduğundan emin olun.`,
+        'Connection Error',
+        `Could not connect to TV. Make sure the TV is on and on the network.`,
         [
-          { text: 'Geri', onPress: () => navigation.goBack() },
-          { text: 'Tekrar Dene', onPress: connectToTV },
+          { text: 'Back', onPress: () => navigation.goBack() },
+          { text: 'Retry', onPress: connectToTV },
         ]
       );
     } finally {
@@ -66,27 +67,27 @@ const ControlScreen = ({ route, navigation }) => {
   };
 
   const connectLGTV = async () => {
-    console.log('🔧 LG TV bağlantısı başlatılıyor...');
+    console.log('🔧 Connecting to LG TV...');
     console.log('📍 IP:', device.ip);
-    
+
     const service = new LGTVService();
-    
+
     // Kayıtlı client key'i yükle
     const clientKey = await AsyncStorage.getItem(`lg_client_key_${device.ip}`);
-    console.log('🔑 Kayıtlı client key:', clientKey ? 'Var' : 'Yok');
-    
+    console.log('🔑 Saved client key:', clientKey ? 'Exists' : 'None');
+
     try {
-      console.log('⏳ Bağlantı kuruluyor...');
+      console.log('⏳ Connecting...');
       const newClientKey = await service.connect(device.ip, clientKey);
-      console.log('✅ Bağlantı başarılı!');
-      
+      console.log('✅ Connection successful!');
+
       // Yeni client key'i kaydet
       if (newClientKey && newClientKey !== clientKey) {
-        console.log('💾 Yeni client key kaydediliyor...');
+        console.log('💾 Saving new client key...');
         await AsyncStorage.setItem(`lg_client_key_${device.ip}`, newClientKey);
       }
 
-      // Ses seviyesi artık gösterilmiyor
+      // Volume is no longer displayed
 
       setTvService(service);
     } catch (error) {
@@ -96,11 +97,11 @@ const ControlScreen = ({ route, navigation }) => {
 
   const connectPhilipsTV = async () => {
     const service = new PhilipsTVService();
-    
+
     try {
       await service.connect(device.ip);
 
-      // Ses seviyesi artık gösterilmiyor
+      // Volume is no longer displayed
 
       setTvService(service);
     } catch (error) {
@@ -109,26 +110,26 @@ const ControlScreen = ({ route, navigation }) => {
   };
 
   const handleChannelNumber = (digit) => {
-    // Mevcut timer'ı iptal et
+    // Cancel existing timer
     if (channelTimer) {
       clearTimeout(channelTimer);
     }
 
-    // Buffer'a rakamı ekle
+    // Add digit to buffer
     const newBuffer = channelBuffer + digit;
     setChannelBuffer(newBuffer);
 
-    // bekle, sonra kanala geç
+    // Wait, then switch to channel
     const timer = setTimeout(async () => {
-      console.log(`📺 Kanal ${newBuffer}'e geçiliyor...`);
+      console.log(`📺 Switching to channel ${newBuffer}...`);
       try {
         await tvService.request('ssap://tv/openChannel', {
           channelNumber: newBuffer
         });
         setChannelBuffer('');
       } catch (error) {
-        console.error('Kanal değiştirme hatası:', error);
-        Alert.alert('Hata', `Kanal ${newBuffer}'e geçilemedi`);
+        console.error('Channel change error:', error);
+        Alert.alert('Error', `Could not switch to channel ${newBuffer}`);
         setChannelBuffer('');
       }
     }, 1200);
@@ -138,11 +139,11 @@ const ControlScreen = ({ route, navigation }) => {
 
   const handleKeyPress = async (key) => {
     if (!tvService || !connected) {
-      Alert.alert('Hata', `TV'ye bağlı değil`);
+      Alert.alert('Error', `Not connected to TV`);
       return;
     }
 
-    // Sayı tuşlarını özel olarak işle
+    // Handle number keys specially
     if (key.startsWith('DIGIT_')) {
       const digit = key.replace('DIGIT_', '');
       handleChannelNumber(digit);
@@ -156,16 +157,16 @@ const ControlScreen = ({ route, navigation }) => {
         await handlePhilipsKey(key);
       }
     } catch (error) {
-      console.error('Komut gönderme hatası:', error);
-      Alert.alert('Hata', 'Komut gönderilemedi: ' + error.message);
+      console.error('Command sending error:', error);
+      Alert.alert('Error', 'Could not send command: ' + error.message);
     }
   };
 
   const handleLGKey = async (key) => {
     // Bağlantı kopuksa yeniden bağlan
     if (!tvService || !tvService.ws || tvService.ws.readyState !== 1) {
-      console.log('⚠️ Bağlantı kopuk, yeniden bağlanılıyor...');
-      Alert.alert('Bağlantı Koptu', 'TV ile bağlantı kesildi. Yeniden bağlanılıyor...');
+      console.log('⚠️ Connection lost, reconnecting...');
+      Alert.alert('Connection Lost', 'Connection to TV lost. Reconnecting...');
       setConnected(false);
       await connectToTV();
       return;
@@ -209,26 +210,26 @@ const ControlScreen = ({ route, navigation }) => {
 
     if (key === 'POWER') {
       await tvService.turnOff();
-      Alert.alert('TV Kapatılıyor', 'TV kapatılıyor...');
+      Alert.alert('Turning Off TV', 'TV is turning off...');
       navigation.goBack();
     } else if (keyMap[key]) {
-      // Gerçek tuş gönder
+      // Send actual key
       try {
         await tvService.sendKey(keyMap[key]);
-        console.log(`✅ Tuş gönderildi: ${keyMap[key]}`);
+        console.log(`✅ Key sent: ${keyMap[key]}`);
       } catch (error) {
-        console.error(`❌ Tuş gönderilemedi: ${error.message}`);
-        Alert.alert('❌ Hata', error.message);
+        console.error(`❌ Key send failed: ${error.message}`);
+        Alert.alert('❌ Error', error.message);
       }
     }
 
-    // Ses seviyesi artık gösterilmiyor
+    // Volume is no longer displayed
   };
 
   const handlePhilipsKey = async (key) => {
     if (key === 'POWER') {
       await tvService.standby();
-      Alert.alert('TV Kapatılıyor', 'TV standby moduna alınıyor...');
+      Alert.alert('Turning Off TV', 'TV is going to standby mode...');
       navigation.goBack();
     } else if (key === 'AMBILIGHT') {
       try {
@@ -236,20 +237,20 @@ const ControlScreen = ({ route, navigation }) => {
         if (ambilightStatus) {
           const newState = ambilightStatus.power === 'On' ? false : true;
           await tvService.setAmbilight(newState);
-          Alert.alert('Ambilight', newState ? 'Açıldı' : 'Kapatıldı');
+          Alert.alert('Ambilight', newState ? 'On' : 'Off');
         }
       } catch (error) {
-        Alert.alert('Hata', `Ambilight bu TV'de desteklenmiyor`);
+        Alert.alert('Error', `Ambilight is not supported on this TV`);
       }
     } else if (PhilipsKeys[key]) {
       await tvService.sendKey(PhilipsKeys[key]);
     }
 
-    // Ses seviyesi artık gösterilmiyor
+    // Volume is no longer displayed
   };
 
   const cancelConnection = () => {
-    console.log('❌ Bağlantı kullanıcı tarafından iptal edildi');
+    console.log('❌ Connection cancelled by user');
     if (tvService) {
       tvService.disconnect();
     }
@@ -261,13 +262,13 @@ const ControlScreen = ({ route, navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2196f3" />
-        <Text style={styles.loadingText}>TV\'ye bağlanılıyor...</Text>
+        <Text style={styles.loadingText}>Connecting to TV...</Text>
         <Text style={styles.deviceInfo}>{device.name}</Text>
         <Text style={styles.deviceInfo}>{device.ip}</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.cancelButton}
           onPress={cancelConnection}>
-          <Text style={styles.cancelButtonText}>İptal</Text>
+          <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
       </View>
     );
@@ -277,19 +278,22 @@ const ControlScreen = ({ route, navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>◄ Geri</Text>
+          <Text style={styles.backButton}>◄ Back</Text>
         </TouchableOpacity>
         <View style={styles.deviceHeader}>
           <Text style={styles.deviceName}>{device.name}</Text>
           <Text style={styles.deviceIP}>{device.ip}</Text>
-          <View style={[styles.statusIndicator, 
-            connected ? styles.connectedIndicator : styles.disconnectedIndicator]}
+          <View style={[styles.statusIndicator,
+          connected ? styles.connectedIndicator : styles.disconnectedIndicator]}
           />
         </View>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <RemoteControl onKeyPress={handleKeyPress} tvType={device.type} />
+        <TouchableOpacity onPress={() => Linking.openURL('https://www.metinaksu.com')}>
+          <Text style={styles.authorText}>Metin Aksu - metinaksu.com</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -298,7 +302,7 @@ const ControlScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#000',
   },
   loadingContainer: {
     flex: 1,
@@ -335,11 +339,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: '#000',
     padding: 15,
     paddingTop: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#4e4b4bff',
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -357,7 +361,7 @@ const styles = StyleSheet.create({
   deviceName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#fff',
   },
   deviceIP: {
     fontSize: 12,
@@ -407,6 +411,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 20,
     paddingBottom: 80,
+  },
+  authorText: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 16,
+    marginTop: 20,
+    marginBottom: 10,
   },
 });
 

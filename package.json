@@ -1,8 +1,8 @@
 {
   "name": "UzaktanKumanda",
   "version": "1.0.0",
-  "displayName": "Uzaktan Kumanda",
-  "description": "LG ve Philips akıllı televizyonlar için uzaktan kumanda uygulaması",
+  "displayName": "LG Remote",
+  "description": "Remote control app for LG smart TVs",
   "private": true,
   "scripts": {
     "android": "react-native run-android",

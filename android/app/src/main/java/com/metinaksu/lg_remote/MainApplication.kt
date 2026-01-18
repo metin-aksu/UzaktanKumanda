@@ -1,4 +1,4 @@
-package com.uzaktankumanda
+package com.metinaksu.lg_remote
 
 import android.app.Application
 import com.facebook.react.PackageList

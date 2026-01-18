@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 10,
     paddingTop: 20,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#000',
     borderRadius: 20,
   },
   row: {

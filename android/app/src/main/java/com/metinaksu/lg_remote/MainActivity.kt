@@ -1,4 +1,4 @@
-package com.uzaktankumanda
+package com.metinaksu.lg_remote
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

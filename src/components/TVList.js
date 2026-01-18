@@ -1,6 +1,6 @@
 /**
  * TV List Component
- * Bulunan televizyonların listesi
+ * List of discovered TVs
  */
 
 import React from 'react';
@@ -24,7 +24,7 @@ const TVList = ({ devices, onSelectDevice, onDiscovery, isScanning, onDeleteDevi
         </Text>
         <Text style={styles.deviceIP}>{item.ip}</Text>
         {item.manual && (
-          <Text style={styles.manualTag}>Manuel Eklendi</Text>
+          <Text style={styles.manualTag}>Manually Added</Text>
         )}
       </View>
       {onDeleteDevice && (
@@ -43,13 +43,13 @@ const TVList = ({ devices, onSelectDevice, onDiscovery, isScanning, onDeleteDevi
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Televizyonlar</Text>
+        <Text style={styles.title}>TVs</Text>
         <TouchableOpacity
           style={[styles.scanButton, isScanning && styles.scanningButton]}
           onPress={onDiscovery}
           disabled={isScanning}>
           <Text style={styles.scanButtonText}>
-            {isScanning ? '🔍 Aranıyor...' : '🔍 Tara'}
+            {isScanning ? '🔍 Scanning...' : '🔍 Scan'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -57,10 +57,10 @@ const TVList = ({ devices, onSelectDevice, onDiscovery, isScanning, onDeleteDevi
       {devices.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
-            Henüz televizyon bulunamadı
+            No TVs found yet
           </Text>
           <Text style={styles.emptySubtext}>
-            TV'lerinizin aynı ağda olduğundan emin olun ve tarama yapın
+            Make sure your TVs are on the same network and scan
           </Text>
         </View>
       ) : (

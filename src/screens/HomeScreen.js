@@ -22,13 +22,13 @@ const HomeScreen = ({ navigation }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualIP, setManualIP] = useState('');
-  const [manualType, setManualType] = useState('lg');
+
 
   const [discoveryService] = useState(() => new TVDiscoveryService());
 
   useEffect(() => {
     loadSavedDevices();
-    
+
     return () => {
       discoveryService.stopDiscovery();
     };
@@ -41,7 +41,7 @@ const HomeScreen = ({ navigation }) => {
         setDevices(JSON.parse(saved));
       }
     } catch (error) {
-      console.error('Kayıtlı cihazlar yüklenemedi:', error);
+      console.error('Failed to load saved devices:', error);
     }
   };
 
@@ -49,13 +49,13 @@ const HomeScreen = ({ navigation }) => {
     try {
       await AsyncStorage.setItem('savedDevices', JSON.stringify(deviceList));
     } catch (error) {
-      console.error('Cihazlar kaydedilemedi:', error);
+      console.error('Failed to save devices:', error);
     }
   };
 
   const handleDiscovery = async () => {
     setIsScanning(true);
-    
+
     try {
       discoveryService.addListener((event, data) => {
         if (event === 'deviceFound') {
@@ -72,19 +72,19 @@ const HomeScreen = ({ navigation }) => {
       });
 
       await discoveryService.startDiscovery(5000);
-      
+
       if (discoveryService.getDevices().length === 0) {
         Alert.alert(
-          'Televizyon Bulunamadı',
-          'Ağda televizyon bulunamadı. Manuel olarak eklemek ister misiniz?',
+          'No TV Found',
+          'No TV found on the network. Would you like to add one manually?',
           [
-            { text: 'Hayır', style: 'cancel' },
-            { text: 'Evet', onPress: () => setShowManualInput(true) },
+            { text: 'No', style: 'cancel' },
+            { text: 'Yes', onPress: () => setShowManualInput(true) },
           ]
         );
       }
     } catch (error) {
-      Alert.alert('Hata', 'Tarama sırasında bir hata oluştu: ' + error.message);
+      Alert.alert('Error', 'An error occurred during scanning: ' + error.message);
     } finally {
       setIsScanning(false);
     }
@@ -92,15 +92,15 @@ const HomeScreen = ({ navigation }) => {
 
   const handleManualAdd = () => {
     if (!manualIP) {
-      Alert.alert('Hata', 'Lütfen IP adresi girin');
+      Alert.alert('Error', 'Please enter an IP address');
       return;
     }
 
     const device = {
-      name: manualType === 'lg' ? 'LG TV' : 'Philips TV',
-      type: manualType,
+      name: 'LG TV',
+      type: 'lg',
       ip: manualIP,
-      port: manualType === 'lg' ? 3000 : 1925,
+      port: 3000,
       manual: true,
       discovered: new Date(),
     };
@@ -108,11 +108,11 @@ const HomeScreen = ({ navigation }) => {
     const newDevices = [...devices, device];
     setDevices(newDevices);
     saveDevices(newDevices);
-    
+
     setShowManualInput(false);
     setManualIP('');
-    
-    Alert.alert('Başarılı', 'Televizyon eklendi');
+
+    Alert.alert('Success', 'TV added successfully');
   };
 
   const handleSelectDevice = (device) => {
@@ -121,23 +121,23 @@ const HomeScreen = ({ navigation }) => {
 
   const handleClearAllData = () => {
     Alert.alert(
-      '⚠️ Tüm Verileri Temizle',
-      'Tüm televizyonlar ve kayıtlı client key\'ler silinecek. Emin misiniz?',
+      '⚠️ Clear All Data',
+      'All TVs and saved client keys will be deleted. Are you sure?',
       [
         {
-          text: 'İptal',
+          text: 'Cancel',
           style: 'cancel',
         },
         {
-          text: 'Temizle',
+          text: 'Clear',
           style: 'destructive',
           onPress: async () => {
             try {
               await AsyncStorage.clear();
               setDevices([]);
-              Alert.alert('✅ Başarılı', 'Tüm veriler temizlendi');
+              Alert.alert('✅ Success', 'All data cleared');
             } catch (error) {
-              Alert.alert('Hata', 'Veriler temizlenirken hata oluştu: ' + error.message);
+              Alert.alert('Error', 'Error clearing data: ' + error.message);
             }
           },
         },
@@ -147,30 +147,30 @@ const HomeScreen = ({ navigation }) => {
 
   const handleDeleteDevice = async (device) => {
     Alert.alert(
-      'TV Sil',
-      `${device.name} televizyonunu silmek istediğinizden emin misiniz?`,
+      'Delete TV',
+      `Are you sure you want to delete ${device.name}?`,
       [
         {
-          text: 'İptal',
+          text: 'Cancel',
           style: 'cancel',
         },
         {
-          text: 'Sil',
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            // Listeden çıkar
+            // Remove from list
             const updatedDevices = devices.filter(d => d.ip !== device.ip);
             setDevices(updatedDevices);
-            
-            // AsyncStorage'dan sil
+
+            // Remove from AsyncStorage
             try {
               await AsyncStorage.setItem('saved_devices', JSON.stringify(updatedDevices));
-              // Client key'i de sil
+              // Also delete client key
               if (device.type === 'lg') {
                 await AsyncStorage.removeItem(`lg_client_key_${device.ip}`);
               }
             } catch (error) {
-              console.error('Cihaz silinirken hata:', error);
+              console.error('Error deleting device:', error);
             }
           },
         },
@@ -192,7 +192,7 @@ const HomeScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.manualAddButton}
           onPress={() => setShowManualInput(true)}>
-          <Text style={styles.manualAddButtonText}>+ Manuel Ekle</Text>
+          <Text style={styles.manualAddButtonText}>+ Add Manually</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -209,9 +209,9 @@ const HomeScreen = ({ navigation }) => {
         onRequestClose={() => setShowManualInput(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Manuel TV Ekle</Text>
-            
-            <Text style={styles.label}>IP Adresi:</Text>
+            <Text style={styles.modalTitle}>Add TV Manually</Text>
+
+            <Text style={styles.label}>IP Address:</Text>
             <TextInput
               style={styles.input}
               value={manualIP}
@@ -220,48 +220,16 @@ const HomeScreen = ({ navigation }) => {
               keyboardType="numeric"
             />
 
-            <Text style={styles.label}>TV Tipi:</Text>
-            <View style={styles.typeSelector}>
-              <TouchableOpacity
-                style={[
-                  styles.typeButton,
-                  manualType === 'lg' && styles.typeButtonActive,
-                ]}
-                onPress={() => setManualType('lg')}>
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    manualType === 'lg' && styles.typeButtonTextActive,
-                  ]}>
-                  LG
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.typeButton,
-                  manualType === 'philips' && styles.typeButtonActive,
-                ]}
-                onPress={() => setManualType('philips')}>
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    manualType === 'philips' && styles.typeButtonTextActive,
-                  ]}>
-                  Philips
-                </Text>
-              </TouchableOpacity>
-            </View>
-
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setShowManualInput(false)}>
-                <Text style={styles.modalButtonText}>İptal</Text>
+                <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.addButton]}
                 onPress={handleManualAdd}>
-                <Text style={styles.modalButtonText}>Ekle</Text>
+                <Text style={styles.modalButtonText}>Add</Text>
               </TouchableOpacity>
             </View>
           </View>
